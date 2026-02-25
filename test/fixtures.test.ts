@@ -4,11 +4,12 @@ import path from 'path';
 import { DNSBuffer } from '../src/DNSBuffer';
 import { parseResponse } from '../src/parser';
 import { RecordType } from '../src/types';
+import config from './config.json';
 
-const QUERY_FILE_NAME = 'query_packet.bin';
-const RESPONSE_FILE_NAME = 'response_packet.bin';
-const MIN_DNS_HEADER_BYTES = 12;
-const DNS_HEADER_QDCOUNT_OFFSET = 4;
+const QUERY_FILE_NAME = config.QUERY_FILE_NAME;
+const RESPONSE_FILE_NAME = config.RESPONSE_FILE_NAME;
+const MIN_DNS_HEADER_BYTES = config.MIN_DNS_HEADER_BYTES;
+const DNS_HEADER_QDCOUNT_OFFSET = config.DNS_HEADER_QDCOUNT_OFFSET;
 
 function fixtureCandidates(fileName: string): string[] {
   return [

@@ -1,0 +1,6 @@
+{
+  "QUERY_FILE_NAME": "query_packet.bin",
+  "RESPONSE_FILE_NAME": "response_packet.bin",
+  "MIN_DNS_HEADER_BYTES": 12,
+  "DNS_HEADER_QDCOUNT_OFFSET": 4
+}
