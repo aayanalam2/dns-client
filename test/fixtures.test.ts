@@ -1,10 +1,10 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import { DNSBuffer } from '../src/DNSBuffer';
-import { parseResponse } from '../src/parser';
-import { RecordType } from '../src/types';
-import config from './config.json';
+import { DNSBuffer } from '../src/DNSBuffer.js';
+import { parseResponse } from '../src/parser.js';
+import { RecordType } from '../src/types.js';
+import config from './config.json' with { type: 'json' };
 
 const QUERY_FILE_NAME = config.QUERY_FILE_NAME;
 const RESPONSE_FILE_NAME = config.RESPONSE_FILE_NAME;

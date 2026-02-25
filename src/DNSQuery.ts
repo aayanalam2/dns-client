@@ -1,5 +1,5 @@
-import { DNSBuffer } from './DNSBuffer';
-import { RecordType } from './types';
+import { DNSBuffer } from './DNSBuffer.js';
+import { RecordType } from './types.js';
 
 export class DNSQuery {
   id: number;

@@ -1,5 +1,5 @@
-import { DNSBuffer } from './DNSBuffer';
-import { RecordType, DNSAnswer } from './types';
+import { DNSBuffer } from './DNSBuffer.js';
+import { RecordType, DNSAnswer } from './types.js';
 
 function ipv4FromBytes(b: Buffer) {
   return Array.from(b)

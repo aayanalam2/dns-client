@@ -1,4 +1,4 @@
-import { DNSQuery } from '../src/DNSQuery';
+import { DNSQuery } from '../src/DNSQuery.js';
 import assert from 'assert';
 
 function testPack() {

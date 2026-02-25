@@ -1,9 +1,9 @@
 import dgram from 'dgram';
 import { once } from 'events';
-import { DNSQuery } from './DNSQuery';
-import { parseResponse } from './parser';
-import { RecordType, DNSAnswer } from './types';
-import config from './config.json';
+import { DNSQuery } from './DNSQuery.js';
+import { parseResponse } from './parser.js';
+import { RecordType, DNSAnswer } from './types.js';
+import config from './config.json' with { type: 'json' };
 
 export async function resolve(
   name: string,

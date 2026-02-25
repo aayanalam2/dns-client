@@ -1,8 +1,8 @@
 import http from 'http';
 import { URL } from 'url';
-import config from './config.json';
-import { resolve } from './client';
-import { RecordType } from './types';
+import config from './config.json' with { type: 'json' };
+import { resolve } from './client.js';
+import { RecordType } from './types.js';
 
 const WEB_HOST = config.web.host;
 const WEB_PORT = config.web.port;

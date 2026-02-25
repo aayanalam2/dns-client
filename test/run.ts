@@ -1,2 +1,2 @@
-import './dns.test';
-import './fixtures.test';
+import './dns.test.js';
+import './fixtures.test.js';
