@@ -12,11 +12,21 @@ export class DNSQuery {
     this.qtype = type;
   }
 
-  static ipv4(name: string) { return new DNSQuery(name, RecordType.A); }
-  static ns(name: string) { return new DNSQuery(name, RecordType.NS); }
-  static aaaa(name: string) { return new DNSQuery(name, RecordType.AAAA); }
-  static mx(name: string) { return new DNSQuery(name, RecordType.MX); }
-  static cname(name: string) { return new DNSQuery(name, RecordType.CNAME); }
+  static ipv4(name: string) {
+    return new DNSQuery(name, RecordType.A);
+  }
+  static ns(name: string) {
+    return new DNSQuery(name, RecordType.NS);
+  }
+  static aaaa(name: string) {
+    return new DNSQuery(name, RecordType.AAAA);
+  }
+  static mx(name: string) {
+    return new DNSQuery(name, RecordType.MX);
+  }
+  static cname(name: string) {
+    return new DNSQuery(name, RecordType.CNAME);
+  }
 
   pack(): Buffer {
     const b = new DNSBuffer(512);

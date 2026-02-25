@@ -3,7 +3,7 @@ export enum RecordType {
   NS = 2,
   CNAME = 5,
   MX = 15,
-  AAAA = 28
+  AAAA = 28,
 }
 
 export interface DNSAnswer {

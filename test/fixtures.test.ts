@@ -14,7 +14,7 @@ const DNS_HEADER_QDCOUNT_OFFSET = config.DNS_HEADER_QDCOUNT_OFFSET;
 function fixtureCandidates(fileName: string): string[] {
   return [
     path.resolve(process.cwd(), fileName),
-    path.resolve(process.cwd(), 'test', 'fixtures', fileName)
+    path.resolve(process.cwd(), 'test', 'fixtures', fileName),
   ];
 }
 
@@ -32,7 +32,11 @@ function testCapturedQueryPacket() {
 
   const pkt = fs.readFileSync(queryPath);
   assert(pkt.length >= MIN_DNS_HEADER_BYTES, 'query packet too small');
-  assert.strictEqual(pkt.readUInt16BE(DNS_HEADER_QDCOUNT_OFFSET), 1, 'qdcount should be 1');
+  assert.strictEqual(
+    pkt.readUInt16BE(DNS_HEADER_QDCOUNT_OFFSET),
+    1,
+    'qdcount should be 1'
+  );
 
   const b = new DNSBuffer(pkt);
   b.readUint16();
@@ -45,7 +49,11 @@ function testCapturedQueryPacket() {
   const qname = b.readName();
   const qtype = b.readUint16();
   const qclass = b.readUint16();
-  assert.strictEqual(qname, 'carbonteq.com', 'captured qname should be carbonteq.com');
+  assert.strictEqual(
+    qname,
+    'carbonteq.com',
+    'captured qname should be carbonteq.com'
+  );
   assert.strictEqual(qtype, RecordType.A, 'captured qtype should be A');
   assert.strictEqual(qclass, 1, 'captured qclass should be IN');
   console.log('testCapturedQueryPacket OK');
@@ -54,15 +62,25 @@ function testCapturedQueryPacket() {
 function testCapturedResponsePacket() {
   const responsePath = findFixture(RESPONSE_FILE_NAME);
   if (!responsePath) {
-    console.log('testCapturedResponsePacket SKIPPED (missing response_packet.bin)');
+    console.log(
+      'testCapturedResponsePacket SKIPPED (missing response_packet.bin)'
+    );
     return;
   }
 
   const pkt = fs.readFileSync(responsePath);
   assert(pkt.length >= MIN_DNS_HEADER_BYTES, 'response packet too small');
   const parsed = parseResponse(pkt);
-  assert(parsed.answers.length > 0, 'response should contain at least one answer');
-  assert(parsed.answers.some((a) => a.type === RecordType.A || a.type === RecordType.CNAME), 'response should contain A or CNAME answers');
+  assert(
+    parsed.answers.length > 0,
+    'response should contain at least one answer'
+  );
+  assert(
+    parsed.answers.some(
+      (a) => a.type === RecordType.A || a.type === RecordType.CNAME
+    ),
+    'response should contain A or CNAME answers'
+  );
   console.log('testCapturedResponsePacket OK');
 }
 

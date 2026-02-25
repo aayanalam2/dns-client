@@ -72,7 +72,11 @@ function htmlPage(): string {
 </html>`;
 }
 
-function writeJson(res: http.ServerResponse, statusCode: number, body: unknown) {
+function writeJson(
+  res: http.ServerResponse,
+  statusCode: number,
+  body: unknown
+) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(body));
@@ -123,9 +127,9 @@ const server = http.createServer(async (req, res) => {
           name,
           server: serverName ?? config.dns.defaultServer,
           port: port ?? config.dns.defaultPort,
-          timeout: timeout ?? config.dns.defaultTimeoutMs
+          timeout: timeout ?? config.dns.defaultTimeoutMs,
         },
-        answers: result.answers
+        answers: result.answers,
       });
     } catch (e: any) {
       writeJson(res, 500, { error: e?.message ?? String(e) });

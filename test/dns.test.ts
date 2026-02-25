@@ -1,7 +1,6 @@
 import { DNSQuery } from '../src/DNSQuery';
 import assert from 'assert';
 
-
 function testPack() {
   const q = DNSQuery.ipv4('example.com');
   const pkt = q.pack();

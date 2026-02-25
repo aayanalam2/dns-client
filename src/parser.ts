@@ -2,7 +2,9 @@ import { DNSBuffer } from './DNSBuffer';
 import { RecordType, DNSAnswer } from './types';
 
 function ipv4FromBytes(b: Buffer) {
-  return Array.from(b).map(x => x.toString()).join('.');
+  return Array.from(b)
+    .map((x) => x.toString())
+    .join('.');
 }
 
 function ipv6FromBytes(b: Buffer) {
@@ -58,7 +60,13 @@ export function parseResponse(buf: Buffer): { answers: DNSAnswer[] } {
       const preference = b.readUint16();
       const exchange = b.readNameAt(pos + 2).name;
       b.offset = pos + rdlen;
-      answers.push({ name, type, class: cls, ttl, data: `${preference} ${exchange}` });
+      answers.push({
+        name,
+        type,
+        class: cls,
+        ttl,
+        data: `${preference} ${exchange}`,
+      });
     } else {
       // unknown type: skip
       b.readBytes(rdlen);

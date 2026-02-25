@@ -14,15 +14,20 @@ const EXIT_INVALID_USAGE = 2;
 const EXIT_RUNTIME_FAILURE = 1;
 
 function printUsage() {
-  console.error('Usage: dns-client <TYPE> <NAME> [--server <ip>] [--port <number>] [--timeout <ms>]');
-  console.error('Example: dns-client A carbonteq.com --server 8.8.8.8 --port 53 --timeout 2000');
+  console.error(
+    'Usage: dns-client <TYPE> <NAME> [--server <ip>] [--port <number>] [--timeout <ms>]'
+  );
+  console.error(
+    'Example: dns-client A carbonteq.com --server 8.8.8.8 --port 53 --timeout 2000'
+  );
 }
 
-function parseRecordType(value: string): RecordType | null {
+function parseRecordType(value: string): RecordType {
   const key = value.toUpperCase() as keyof typeof RecordType;
-  const resolved = RecordType[key];
-  if (typeof resolved !== 'number') return null;
-  return resolved;
+  if (!(key in RecordType)) {
+    throw new Error(`Unsupported record type: ${value}`);
+  }
+  return RecordType[key];
 }
 
 function parsePositiveInt(value: string, fieldName: string): number {
@@ -77,6 +82,8 @@ function parseCliArgs(args: string[]): CliOptions {
 
 async function main() {
   let options: CliOptions;
+  let rtype: RecordType;
+
   try {
     options = parseCliArgs(process.argv.slice(2));
   } catch (e: any) {
@@ -84,22 +91,36 @@ async function main() {
     printUsage();
     process.exit(EXIT_INVALID_USAGE);
   }
-
-  const rtype = parseRecordType(options.type);
-  if (rtype === null) {
-    console.error(`Unsupported type: ${options.type}`);
+  try {
+    rtype = parseRecordType(options.type);
+  } catch (e: any) {
+    console.error(e.message || e);
     printUsage();
     process.exit(EXIT_INVALID_USAGE);
   }
 
   try {
-    const res = await resolve(options.name, rtype, options.server, options.port, options.timeout);
+    const res = await resolve(
+      options.name,
+      rtype,
+      options.server,
+      options.port,
+      options.timeout
+    );
     if (res.answers.length === 0) {
-      console.log(`No answers for ${options.type.toUpperCase()} ${options.name}`);
+      console.log(
+        `No answers for ${options.type.toUpperCase()} ${options.name}`
+      );
       return;
     }
     for (const a of res.answers) {
-      console.log(`${a.name} ${a.ttl} IN ${Object.keys(RecordType).find(k => (RecordType as any)[k] === a.type)} ${a.data}`);
+      const typeName =
+        (
+          Object.entries(RecordType) as Array<
+            [keyof typeof RecordType, RecordType]
+          >
+        ).find(([, value]) => value === a.type)?.[0] ?? String(a.type);
+      console.log(`${a.name} ${a.ttl} IN ${typeName} ${a.data}`);
     }
   } catch (e: any) {
     console.error('Query failed:', e.message || e);

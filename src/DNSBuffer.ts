@@ -30,13 +30,32 @@ export class DNSBuffer {
     }
   }
 
-  writeUint8(v: number) { this.ensure(1); this.buf.writeUInt8(v, this.offset); this.offset += 1; }
-  writeUint16(v: number) { this.ensure(2); this.buf.writeUInt16BE(v, this.offset); this.offset += 2; }
-  writeUint32(v: number) { this.ensure(4); this.buf.writeUInt32BE(v, this.offset); this.offset += 4; }
-  writeBytes(b: Buffer) { this.ensure(b.length); b.copy(this.buf, this.offset); this.offset += b.length; }
+  writeUint8(v: number) {
+    this.ensure(1);
+    this.buf.writeUInt8(v, this.offset);
+    this.offset += 1;
+  }
+  writeUint16(v: number) {
+    this.ensure(2);
+    this.buf.writeUInt16BE(v, this.offset);
+    this.offset += 2;
+  }
+  writeUint32(v: number) {
+    this.ensure(4);
+    this.buf.writeUInt32BE(v, this.offset);
+    this.offset += 4;
+  }
+  writeBytes(b: Buffer) {
+    this.ensure(b.length);
+    b.copy(this.buf, this.offset);
+    this.offset += b.length;
+  }
 
   writeName(name: string) {
-    if (name === '') { this.writeUint8(0); return; }
+    if (name === '') {
+      this.writeUint8(0);
+      return;
+    }
     const parts = name.split('.');
     for (const p of parts) {
       const len = Buffer.byteLength(p);
@@ -69,7 +88,8 @@ export class DNSBuffer {
   readBytes(len: number) {
     this.ensureReadable(len);
     const b = this.buf.subarray(this.offset, this.offset + len);
-    this.offset += len; return b;
+    this.offset += len;
+    return b;
   }
 
   // readName without advancing main offset when using readNameAt
@@ -78,7 +98,8 @@ export class DNSBuffer {
       throw new Error('name compression pointer loop');
     }
 
-    let off = pos; const labels: string[] = [];
+    let off = pos;
+    const labels: string[] = [];
     const origOff = pos;
     while (true) {
       this.ensureReadable(1, off);
@@ -108,5 +129,7 @@ export class DNSBuffer {
     return r.name;
   }
 
-  bytes(): Buffer { return this.buf.subarray(0, this.offset); }
+  bytes(): Buffer {
+    return this.buf.subarray(0, this.offset);
+  }
 }
