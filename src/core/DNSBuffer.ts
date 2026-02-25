@@ -82,4 +82,11 @@ export class DNSBuffer extends ByteCursor {
     };
   }
 
+  readDataAt(pos: number, len: number): Buffer {
+    return this.readBytesAt(pos, len);
+  }
+
+  readUint16At(pos: number): number {
+    return super.readUint16At(pos);
+  }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { resolve } from './client.js';
-import { RecordType } from './types.js';
+import { RecordType } from './core/types.js';
 
 type CliOptions = {
   type: string;

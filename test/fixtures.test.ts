@@ -1,9 +1,9 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import { DNSBuffer } from '../src/DNSBuffer.js';
-import { parseResponse } from '../src/parser.js';
-import { RecordType } from '../src/types.js';
+import { DNSBuffer } from '../src/core/DNSBuffer.js';
+import { parseResponse } from '../src/protocol/parser.js';
+import { RecordType } from '../src/core/types.js';
 import config from './config.json' with { type: 'json' };
 
 const QUERY_FILE_NAME = config.QUERY_FILE_NAME;

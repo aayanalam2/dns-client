@@ -1,8 +1,8 @@
 import dgram from 'dgram';
 import { once } from 'events';
-import { DNSQuery } from './DNSQuery.js';
-import { parseResponse } from './parser.js';
-import { RecordType, DNSAnswer } from './types.js';
+import { DNSQuery } from './protocol/query.js';
+import { parseResponse } from './protocol/parser.js';
+import { RecordType, DNSAnswer } from './core/types.js';
 import config from './config.json' with { type: 'json' };
 
 type SocketFactory = () => dgram.Socket;
