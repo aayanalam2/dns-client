@@ -15,62 +15,69 @@ function ipv6FromBytes(b: Buffer) {
   return parts.join(':').replace(/(^|:)0(:0)+(:|$)/, '::');
 }
 
+const parseA = (b: DNSBuffer, pos: number, rdlen: number) => {
+  const buf = b.readBytesAt(pos, rdlen);
+  return ipv4FromBytes(buf);
+};
+
+const parseAAAA = (b: DNSBuffer, pos: number, rdlen: number) => {
+  const buf = b.readBytesAt(pos, rdlen);
+  return ipv6FromBytes(buf);
+};
+
+const parseName = (b: DNSBuffer, pos: number, rdlen: number) => {
+  return b.readNameAt(pos).name;
+};
+
+const parseMX = (b: DNSBuffer, pos: number, rdlen: number) => {
+  const preference = b.readUint16At(pos);
+  const exchange = b.readNameAt(pos + 2).name;
+  return `${preference} ${exchange}`;
+};
+
+const answerParsers: Record<number, (b: DNSBuffer, pos: number, rdlen: number) => string> = {
+  [RecordType.A]: parseA,
+  [RecordType.AAAA]: parseAAAA,
+  [RecordType.CNAME]: parseName,
+  [RecordType.NS]: parseName,
+  [RecordType.MX]: parseMX,
+};
+
+function parseAnswer(
+  b: DNSBuffer,
+  name: string,
+  type: number,
+  cls: number,
+  ttl: number,
+  rdlen: number
+): DNSAnswer {
+  const pos = b.offset;
+  const parser = answerParsers[type];
+  const data = parser ? parser(b, pos, rdlen) : (b.readBytes(rdlen), '');
+  b.advanceOffset(rdlen);
+
+  return { name, type, class: cls, ttl, data };
+}
+
 export function parseResponse(buf: Buffer): { answers: DNSAnswer[] } {
   const b = new DNSBuffer(buf);
-  const id = b.readUint16();
-  const flags = b.readUint16();
-  const qdcount = b.readUint16();
-  const ancount = b.readUint16();
-  b.readUint16(); // nscount
-  b.readUint16(); // arcount
+  const header = b.readHeader();
 
   // skip questions
-  for (let i = 0; i < qdcount; i++) {
+  for (let i = 0; i < header.qdcount; i++) {
     b.readName();
     b.readUint16();
     b.readUint16();
   }
 
   const answers: DNSAnswer[] = [];
-  for (let i = 0; i < ancount; i++) {
+  for (let i = 0; i < header.ancount; i++) {
     const name = b.readName();
     const type = b.readUint16();
     const cls = b.readUint16();
     const ttl = b.readUint32();
     const rdlen = b.readUint16();
-    if (type === RecordType.A) {
-      const data = b.readBytes(rdlen);
-      answers.push({ name, type, class: cls, ttl, data: ipv4FromBytes(data) });
-    } else if (type === RecordType.AAAA) {
-      const data = b.readBytes(rdlen);
-      answers.push({ name, type, class: cls, ttl, data: ipv6FromBytes(data) });
-    } else if (type === RecordType.CNAME) {
-      // rdata may be a name (possibly compressed)
-      const pos = b.offset;
-      const r = b.readNameAt(pos);
-      b.offset = pos + rdlen;
-      answers.push({ name, type, class: cls, ttl, data: r.name });
-    } else if (type === RecordType.NS) {
-      const pos = b.offset;
-      const r = b.readNameAt(pos);
-      b.offset = pos + rdlen;
-      answers.push({ name, type, class: cls, ttl, data: r.name });
-    } else if (type === RecordType.MX) {
-      const pos = b.offset;
-      const preference = b.readUint16();
-      const exchange = b.readNameAt(pos + 2).name;
-      b.offset = pos + rdlen;
-      answers.push({
-        name,
-        type,
-        class: cls,
-        ttl,
-        data: `${preference} ${exchange}`,
-      });
-    } else {
-      // unknown type: skip
-      b.readBytes(rdlen);
-    }
+    answers.push(parseAnswer(b, name, type, cls, ttl, rdlen));
   }
 
   return { answers };

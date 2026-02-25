@@ -15,7 +15,7 @@ export class DNSBuffer {
     else this.buf = sizeOrBuffer;
   }
 
-  ensure(n: number) {
+  ensureSize(n: number) {
     if (this.offset + n > this.buf.length) {
       const nb = Buffer.alloc(Math.max(this.buf.length * 2, this.offset + n));
       this.buf.copy(nb, 0, 0, this.offset);
@@ -30,23 +30,24 @@ export class DNSBuffer {
     }
   }
 
+  //Write functions
   writeUint8(v: number) {
-    this.ensure(1);
+    this.ensureSize(1);
     this.buf.writeUInt8(v, this.offset);
     this.offset += 1;
   }
   writeUint16(v: number) {
-    this.ensure(2);
+    this.ensureSize(2);
     this.buf.writeUInt16BE(v, this.offset);
     this.offset += 2;
   }
   writeUint32(v: number) {
-    this.ensure(4);
+    this.ensureSize(4);
     this.buf.writeUInt32BE(v, this.offset);
     this.offset += 4;
   }
   writeBytes(b: Buffer) {
-    this.ensure(b.length);
+    this.ensureSize(b.length);
     b.copy(this.buf, this.offset);
     this.offset += b.length;
   }
@@ -67,6 +68,7 @@ export class DNSBuffer {
     this.writeUint8(0);
   }
 
+  //Read functions
   readUint8() {
     this.ensureReadable(1, this.offset);
     const v = this.buf.readUInt8(this.offset);
@@ -92,12 +94,18 @@ export class DNSBuffer {
     return b;
   }
 
-  // readName without advancing main offset when using readNameAt
+  readName() {
+    const r = this.readNameAt(this.offset);
+    this.offset += r.length;
+    return r.name;
+  }
+  
+  // Read functions with explicit position (These do not advance the main offset)
   readNameAt(pos: number, depth = 0): { name: string; length: number } {
     if (depth > MAX_NAME_JUMPS) {
       throw new Error('name compression pointer loop');
     }
-
+    
     let off = pos;
     const labels: string[] = [];
     const origOff = pos;
@@ -122,11 +130,28 @@ export class DNSBuffer {
     const length = off - origOff;
     return { name: labels.filter(Boolean).join('.'), length };
   }
+  readUint16At(pos: number) {
+    this.ensureReadable(2, pos);
+    return this.buf.readUInt16BE(pos);
+  }
+  readBytesAt(pos: number, len: number) {
+    this.ensureReadable(len, pos);
+    return this.buf.subarray(pos, pos + len);
+  }
 
-  readName() {
-    const r = this.readNameAt(this.offset);
-    this.offset += r.length;
-    return r.name;
+  advanceOffset(len: number) {
+    this.offset += len;
+  }
+  
+  readHeader() {
+    return {
+      id: this.readUint16(),
+      flags: this.readUint16(),
+      qdcount: this.readUint16(),
+      ancount: this.readUint16(),
+      nscount: this.readUint16(),
+      arcount: this.readUint16(),
+    };
   }
 
   bytes(): Buffer {
