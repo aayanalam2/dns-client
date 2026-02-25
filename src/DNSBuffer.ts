@@ -48,23 +48,23 @@ export class DNSBuffer {
     this.writeUint8(0);
   }
 
-  readUint8(at?: number) {
-    const o = at ?? this.offset;
-    this.ensureReadable(1, o);
-    const v = this.buf.readUInt8(o);
-    if (at === undefined) this.offset += 1; return v;
+  readUint8() {
+    this.ensureReadable(1, this.offset);
+    const v = this.buf.readUInt8(this.offset);
+    this.offset += 1;
+    return v;
   }
-  readUint16(at?: number) {
-    const o = at ?? this.offset;
-    this.ensureReadable(2, o);
-    const v = this.buf.readUInt16BE(o);
-    if (at === undefined) this.offset += 2; return v;
+  readUint16() {
+    this.ensureReadable(2, this.offset);
+    const v = this.buf.readUInt16BE(this.offset);
+    this.offset += 2;
+    return v;
   }
-  readUint32(at?: number) {
-    const o = at ?? this.offset;
-    this.ensureReadable(4, o);
-    const v = this.buf.readUInt32BE(o);
-    if (at === undefined) this.offset += 4; return v;
+  readUint32() {
+    this.ensureReadable(4, this.offset);
+    const v = this.buf.readUInt32BE(this.offset);
+    this.offset += 4;
+    return v;
   }
   readBytes(len: number) {
     this.ensureReadable(len);
