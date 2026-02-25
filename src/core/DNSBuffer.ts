@@ -23,7 +23,10 @@ export class DNSBuffer extends ByteCursor {
     return result.name;
   }
 
-  private readNameInternal(startPos: number, depth = 0): { name: string; length: number } {
+  private readNameInternal(
+    startPos: number,
+    depth = 0
+  ): { name: string; length: number } {
     if (depth > MAX_NAME_JUMPS) {
       throw new Error('name compression pointer loop');
     }

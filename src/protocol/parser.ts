@@ -15,30 +15,27 @@ function ipv6FromBytes(b: Buffer) {
   return parts.join(':').replace(/(^|:)0(:0)+(:|$)/, '::');
 }
 
-const parseA = (b: DNSBuffer, rdlen?: number) => {
+const parseA = (b: DNSBuffer, rdlen: number) => {
   const buf = b.readBytes(rdlen!);
   return ipv4FromBytes(buf);
 };
 
-const parseAAAA = (b: DNSBuffer, rdlen?: number) => {
+const parseAAAA = (b: DNSBuffer, rdlen: number) => {
   const buf = b.readBytes(rdlen!);
   return ipv6FromBytes(buf);
 };
 
-const parseName = (b: DNSBuffer, rdlen?: number) => {
+const parseName = (b: DNSBuffer) => {
   return b.readName();
 };
 
-const parseMX = (b: DNSBuffer, rdlen?: number) => {
+const parseMX = (b: DNSBuffer) => {
   const preference = b.readUint16();
   const exchange = b.readName();
   return `${preference} ${exchange}`;
 };
 
-const answerParsers: Record<
-  number,
-  (b: DNSBuffer, rdlen?: number) => string
-> = {
+const answerParsers: Record<number, (b: DNSBuffer, rdlen: number) => string> = {
   [RecordType.A]: parseA,
   [RecordType.AAAA]: parseAAAA,
   [RecordType.CNAME]: parseName,

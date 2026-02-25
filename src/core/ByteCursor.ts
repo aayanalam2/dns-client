@@ -32,7 +32,11 @@ export class ByteCursor {
   }
 
   // Generic position-based read template
-  private readAtInternal<T>(pos: number, size: number, fn: (pos: number) => T): T {
+  private readAtInternal<T>(
+    pos: number,
+    size: number,
+    fn: (pos: number) => T
+  ): T {
     this.ensureReadable(size, pos);
     return fn(pos);
   }
