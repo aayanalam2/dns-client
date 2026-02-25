@@ -17,37 +17,34 @@ export class DNSBuffer extends ByteCursor {
   }
 
   // DNS name encoding/decoding
-  readName(pos?: number): string {
-    const startPos = pos ?? this.offset;
-    const result = this.readNameAt(startPos);
-    if (pos === undefined) {
-      this.advanceOffset(result.length);
-    }
+  readName(): string {
+    const result = this.readNameInternal(this.offset);
+    this.offset += result.length;
     return result.name;
   }
 
-  readNameAt(pos: number, depth = 0): { name: string; length: number } {
+  private readNameInternal(startPos: number, depth = 0): { name: string; length: number } {
     if (depth > MAX_NAME_JUMPS) {
       throw new Error('name compression pointer loop');
     }
 
-    let off = pos;
+    let off = startPos;
     const labels: string[] = [];
-    const origOff = pos;
+    const origOff = startPos;
 
     while (true) {
-      const len = this.readUint8At(off);
+      const len = this.buf.readUInt8(off);
       if ((len & DNS_POINTER_MASK) === DNS_POINTER_VALUE) {
-        const b2 = this.readUint8At(off + 1);
+        const b2 = this.buf.readUInt8(off + 1);
         const ptr = ((len & DNS_POINTER_OFFSET_MASK) << 8) | b2;
-        const r = this.readNameAt(ptr, depth + 1);
+        const r = this.readNameInternal(ptr, depth + 1);
         labels.push(r.name);
         off += 2;
         break;
       }
       off += 1;
       if (len === 0) break;
-      labels.push(this.readStringAt(off, len));
+      labels.push(this.buf.toString('ascii', off, off + len));
       off += len;
     }
 
@@ -80,13 +77,5 @@ export class DNSBuffer extends ByteCursor {
       nscount: this.readUint16(),
       arcount: this.readUint16(),
     };
-  }
-
-  readDataAt(pos: number, len: number): Buffer {
-    return this.readBytesAt(pos, len);
-  }
-
-  readUint16At(pos: number): number {
-    return super.readUint16At(pos);
   }
 }

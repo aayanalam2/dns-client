@@ -15,29 +15,29 @@ function ipv6FromBytes(b: Buffer) {
   return parts.join(':').replace(/(^|:)0(:0)+(:|$)/, '::');
 }
 
-const parseA = (b: DNSBuffer, pos: number, rdlen: number) => {
-  const buf = b.readBytesAt(pos, rdlen);
+const parseA = (b: DNSBuffer, rdlen?: number) => {
+  const buf = b.readBytes(rdlen!);
   return ipv4FromBytes(buf);
 };
 
-const parseAAAA = (b: DNSBuffer, pos: number, rdlen: number) => {
-  const buf = b.readBytesAt(pos, rdlen);
+const parseAAAA = (b: DNSBuffer, rdlen?: number) => {
+  const buf = b.readBytes(rdlen!);
   return ipv6FromBytes(buf);
 };
 
-const parseName = (b: DNSBuffer, pos: number) => {
-  return b.readNameAt(pos).name;
+const parseName = (b: DNSBuffer, rdlen?: number) => {
+  return b.readName();
 };
 
-const parseMX = (b: DNSBuffer, pos: number) => {
-  const preference = b.readUint16At(pos);
-  const exchange = b.readNameAt(pos + 2).name;
+const parseMX = (b: DNSBuffer, rdlen?: number) => {
+  const preference = b.readUint16();
+  const exchange = b.readName();
   return `${preference} ${exchange}`;
 };
 
 const answerParsers: Record<
   number,
-  (b: DNSBuffer, pos: number, rdlen: number) => string
+  (b: DNSBuffer, rdlen?: number) => string
 > = {
   [RecordType.A]: parseA,
   [RecordType.AAAA]: parseAAAA,
@@ -54,10 +54,8 @@ function parseAnswer(
   ttl: number,
   rdlen: number
 ): DNSAnswer {
-  const pos = b.offset;
   const parser = answerParsers[type];
-  const data = parser ? parser(b, pos, rdlen) : (b.readBytes(rdlen), '');
-  b.advanceOffset(rdlen);
+  const data = parser ? parser(b, rdlen) : (b.readBytes(rdlen), '');
 
   return { name, type, class: cls, ttl, data };
 }

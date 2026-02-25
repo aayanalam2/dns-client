@@ -6,7 +6,7 @@ import { Buffer } from 'buffer';
  * Zero DNS knowledge.
  */
 export class ByteCursor {
-  private buf: Buffer;
+  protected buf: Buffer;
   offset: number = 0;
 
   constructor(sizeOrBuffer: number | Buffer = 512) {
@@ -51,25 +51,13 @@ export class ByteCursor {
     this.offset += size;
   }
 
-  // Position-based reads (no offset change)
-  readUint8At(pos: number): number {
-    return this.readAtInternal(pos, 1, (p) => this.buf.readUInt8(p));
-  }
-
-  readUint16At(pos: number): number {
-    return this.readAtInternal(pos, 2, (p) => this.buf.readUInt16BE(p));
-  }
-
-  readUint32At(pos: number): number {
-    return this.readAtInternal(pos, 4, (p) => this.buf.readUInt32BE(p));
-  }
-
-  readBytesAt(pos: number, len: number): Buffer {
-    return this.readAtInternal(pos, len, (p) => this.buf.subarray(p, p + len));
-  }
-
-  readStringAt(pos: number, len: number): string {
-    return this.readAtInternal(pos, len, (p) => this.buf.toString('ascii', p, p + len));
+  // Temporary offset helper - run code at a different offset without changing cursor position
+  private withOffsetAt<T>(pos: number, fn: () => T): T {
+    const savedOffset = this.offset;
+    this.offset = pos;
+    const result = fn();
+    this.offset = savedOffset;
+    return result;
   }
 
   // Sequential reads (with offset tracking)
@@ -107,9 +95,6 @@ export class ByteCursor {
   }
 
   // Buffer management
-  advanceOffset(len: number) {
-    this.offset += len;
-  }
 
   bytes(): Buffer {
     return this.buf.subarray(0, this.offset);
