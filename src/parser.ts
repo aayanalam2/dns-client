@@ -25,17 +25,20 @@ const parseAAAA = (b: DNSBuffer, pos: number, rdlen: number) => {
   return ipv6FromBytes(buf);
 };
 
-const parseName = (b: DNSBuffer, pos: number, rdlen: number) => {
+const parseName = (b: DNSBuffer, pos: number) => {
   return b.readNameAt(pos).name;
 };
 
-const parseMX = (b: DNSBuffer, pos: number, rdlen: number) => {
+const parseMX = (b: DNSBuffer, pos: number) => {
   const preference = b.readUint16At(pos);
   const exchange = b.readNameAt(pos + 2).name;
   return `${preference} ${exchange}`;
 };
 
-const answerParsers: Record<number, (b: DNSBuffer, pos: number, rdlen: number) => string> = {
+const answerParsers: Record<
+  number,
+  (b: DNSBuffer, pos: number, rdlen: number) => string
+> = {
   [RecordType.A]: parseA,
   [RecordType.AAAA]: parseAAAA,
   [RecordType.CNAME]: parseName,

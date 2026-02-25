@@ -15,7 +15,7 @@ export class DNSBuffer {
     else this.buf = sizeOrBuffer;
   }
 
-  ensureSize(n: number) {
+  private ensureSize(n: number) {
     if (this.offset + n > this.buf.length) {
       const nb = Buffer.alloc(Math.max(this.buf.length * 2, this.offset + n));
       this.buf.copy(nb, 0, 0, this.offset);
@@ -23,33 +23,46 @@ export class DNSBuffer {
     }
   }
 
-  ensureReadable(n: number, at?: number) {
+  private ensureReadable(n: number, at?: number) {
     const start = at ?? this.offset;
     if (start < 0 || start + n > this.buf.length) {
       throw new Error('buffer underflow');
     }
   }
+  
+  private readAt<T>(size: number, pos: number, fn: (offset: number) => T): T {
+    this.ensureReadable(size, pos);
+    return fn(pos);
+  }
+  
+  private readAndAdvance<T>(size: number, fn: (offset: number) => T): T {
+    const result = this.readAt(size, this.offset, fn);
+    this.offset += size;
+    return result;
+  }
 
-  //Write functions
+
+  private writeAndAdvance(size: number, fn: (offset: number) => void) {
+    this.ensureSize(size);
+    fn(this.offset);
+    this.offset += size;
+  }
+
+  // Write functions
   writeUint8(v: number) {
-    this.ensureSize(1);
-    this.buf.writeUInt8(v, this.offset);
-    this.offset += 1;
+    this.writeAndAdvance(1, (pos) => this.buf.writeUInt8(v, pos));
   }
+
   writeUint16(v: number) {
-    this.ensureSize(2);
-    this.buf.writeUInt16BE(v, this.offset);
-    this.offset += 2;
+    this.writeAndAdvance(2, (pos) => this.buf.writeUInt16BE(v, pos));
   }
+
   writeUint32(v: number) {
-    this.ensureSize(4);
-    this.buf.writeUInt32BE(v, this.offset);
-    this.offset += 4;
+    this.writeAndAdvance(4, (pos) => this.buf.writeUInt32BE(v, pos));
   }
+
   writeBytes(b: Buffer) {
-    this.ensureSize(b.length);
-    b.copy(this.buf, this.offset);
-    this.offset += b.length;
+    this.writeAndAdvance(b.length, (pos) => b.copy(this.buf, pos));
   }
 
   writeName(name: string) {
@@ -68,30 +81,21 @@ export class DNSBuffer {
     this.writeUint8(0);
   }
 
-  //Read functions
+  // Read functions (with offset advancement)
   readUint8() {
-    this.ensureReadable(1, this.offset);
-    const v = this.buf.readUInt8(this.offset);
-    this.offset += 1;
-    return v;
+    return this.readAndAdvance(1, (pos) => this.buf.readUInt8(pos));
   }
+
   readUint16() {
-    this.ensureReadable(2, this.offset);
-    const v = this.buf.readUInt16BE(this.offset);
-    this.offset += 2;
-    return v;
+    return this.readAndAdvance(2, (pos) => this.buf.readUInt16BE(pos));
   }
+
   readUint32() {
-    this.ensureReadable(4, this.offset);
-    const v = this.buf.readUInt32BE(this.offset);
-    this.offset += 4;
-    return v;
+    return this.readAndAdvance(4, (pos) => this.buf.readUInt32BE(pos));
   }
+
   readBytes(len: number) {
-    this.ensureReadable(len);
-    const b = this.buf.subarray(this.offset, this.offset + len);
-    this.offset += len;
-    return b;
+    return this.readAndAdvance(len, (pos) => this.buf.subarray(pos, pos + len));
   }
 
   readName() {
@@ -99,13 +103,21 @@ export class DNSBuffer {
     this.offset += r.length;
     return r.name;
   }
-  
-  // Read functions with explicit position (These do not advance the main offset)
+
+  // Read functions with explicit position (no offset advancement)
+  readUint16At(pos: number) {
+    return this.readAt(2, pos, (p) => this.buf.readUInt16BE(p));
+  }
+
+  readBytesAt(pos: number, len: number) {
+    return this.readAt(len, pos, (p) => this.buf.subarray(p, p + len));
+  }
+
   readNameAt(pos: number, depth = 0): { name: string; length: number } {
     if (depth > MAX_NAME_JUMPS) {
       throw new Error('name compression pointer loop');
     }
-    
+
     let off = pos;
     const labels: string[] = [];
     const origOff = pos;
@@ -130,19 +142,12 @@ export class DNSBuffer {
     const length = off - origOff;
     return { name: labels.filter(Boolean).join('.'), length };
   }
-  readUint16At(pos: number) {
-    this.ensureReadable(2, pos);
-    return this.buf.readUInt16BE(pos);
-  }
-  readBytesAt(pos: number, len: number) {
-    this.ensureReadable(len, pos);
-    return this.buf.subarray(pos, pos + len);
-  }
 
+  // Utility methods
   advanceOffset(len: number) {
     this.offset += len;
   }
-  
+
   readHeader() {
     return {
       id: this.readUint16(),
