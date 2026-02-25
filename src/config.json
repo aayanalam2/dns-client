@@ -1,0 +1,7 @@
+{
+  "dns": {
+    "defaultServer": "8.8.8.8",
+    "defaultPort": 53,
+    "defaultTimeoutMs": 2000
+  }
+}

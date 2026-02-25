@@ -1,0 +1,20 @@
+{
+  "name": "dns-client",
+  "version": "0.1.0",
+  "description": "Minimal DNS client library in TypeScript supporting A, AAAA and CNAME",
+  "main": "dist/src/cli.js",
+  "bin": {
+    "dns-client": "dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/src/cli.js",
+    "web": "node dist/src/web.js",
+    "test": "npm run build && node dist/test/run.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "^5.0.0"
+  },
+  "license": "MIT"
+}
