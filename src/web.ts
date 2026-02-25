@@ -4,8 +4,8 @@ import config from './config.json';
 import { resolve } from './client';
 import { RecordType } from './types';
 
-const WEB_HOST = '127.0.0.1';
-const WEB_PORT = 3000;
+const WEB_HOST = config.web.host;
+const WEB_PORT = config.web.port;
 
 function parseRecordType(value: string): RecordType | null {
   const key = value.toUpperCase() as keyof typeof RecordType;
