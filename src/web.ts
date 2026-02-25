@@ -120,7 +120,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      const result = await resolve(name, rtype, serverName, port, timeout);
+      const result = await resolve(name, rtype, {
+        server: serverName,
+        port,
+        timeout,
+      });
       writeJson(res, 200, {
         query: {
           type: typeRaw.toUpperCase(),

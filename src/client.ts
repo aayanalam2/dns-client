@@ -5,18 +5,26 @@ import { parseResponse } from './parser.js';
 import { RecordType, DNSAnswer } from './types.js';
 import config from './config.json' with { type: 'json' };
 
+type SocketFactory = () => dgram.Socket;
+
+const defaultSocketFactory: SocketFactory = () => dgram.createSocket('udp4');
+
 export async function resolve(
   name: string,
   type: RecordType,
-  server?: string,
-  port?: number,
-  timeout?: number
+  options?: {
+    server?: string;
+    port?: number;
+    timeout?: number;
+    socketFactory?: SocketFactory;
+  }
 ): Promise<{ answers: DNSAnswer[] }> {
-  const dnsServer = server ?? config.dns.defaultServer;
-  const dnsPort = port ?? config.dns.defaultPort;
-  const dnsTimeout = timeout ?? config.dns.defaultTimeoutMs;
+  const dnsServer = options?.server ?? config.dns.defaultServer;
+  const dnsPort = options?.port ?? config.dns.defaultPort;
+  const dnsTimeout = options?.timeout ?? config.dns.defaultTimeoutMs;
+  const socketFactory = options?.socketFactory ?? defaultSocketFactory;
 
-  const socket = dgram.createSocket('udp4');
+  const socket = socketFactory();
   const query = new DNSQuery(name, type);
   const packet = query.pack();
 

@@ -100,13 +100,11 @@ async function main() {
   }
 
   try {
-    const res = await resolve(
-      options.name,
-      rtype,
-      options.server,
-      options.port,
-      options.timeout
-    );
+    const res = await resolve(options.name, rtype, {
+      server: options.server,
+      port: options.port,
+      timeout: options.timeout,
+    });
     if (res.answers.length === 0) {
       console.log(
         `No answers for ${options.type.toUpperCase()} ${options.name}`
