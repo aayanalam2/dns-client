@@ -3,6 +3,8 @@ import { DNSSocket } from './base.js';
 
 export class TCPSocket extends DNSSocket {
   private socket: net.Socket;
+  private buffer: Buffer = Buffer.alloc(0);
+  private messageLength: number | null = null;
 
   constructor() {
     super();
@@ -16,56 +18,108 @@ export class TCPSocket extends DNSSocket {
     timeout: number
   ): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.socket.connect({ host: server, port }, () => resolve());
-      setTimeout(() => reject(new Error('TCP connection timed out')), timeout);
+      let timeoutHandle: NodeJS.Timeout | null = null;
+
+      const cleanup = () => {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+        }
+        this.socket.removeListener('connect', onConnect);
+        this.socket.removeListener('error', onError);
+      };
+
+      const onConnect = () => {
+        cleanup();
+        resolve();
+      };
+
+      const onError = (err: Error) => {
+        cleanup();
+        this.socket.destroy();
+        reject(err);
+      };
+
+      timeoutHandle = setTimeout(() => {
+        cleanup();
+        this.socket.destroy();
+        reject(new Error('TCP connection timed out'));
+      }, timeout);
+
+      this.socket.on('connect', onConnect);
+      this.socket.on('error', onError);
+      this.socket.connect({ host: server, port });
     });
 
     await new Promise<void>((resolve, reject) => {
       this.socket.write(packet, (err) => {
-        if (err) reject(err);
-        else resolve();
+        if (err) {
+          this.socket.destroy();
+          reject(err);
+        } else {
+          resolve();
+        }
       });
     });
   }
 
   async receive(timeout: number): Promise<Buffer> {
-    let buffer = Buffer.alloc(0);
-    let messageLength: number | null = null;
-
     return new Promise<Buffer>((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
-        reject(new Error('DNS query timed out'));
+        cleanup();
+        this.socket.destroy();
+        reject(new Error('TCP receive timed out'));
       }, timeout);
 
-      const onData = (chunk: Buffer) => {
-        buffer = Buffer.concat([buffer, chunk]);
+      const cleanup = () => {
+        clearTimeout(timeoutHandle);
+        this.socket.removeListener('data', onData);
+        this.socket.removeListener('error', onError);
+        this.socket.removeListener('close', onClose);
+        this.socket.removeListener('end', onEnd);
+      };
 
-        // Read the 2-byte length prefix if we haven't yet
-        if (messageLength === null && buffer.length >= 2) {
-          messageLength = buffer.readUInt16BE(0);
+      const onData = (chunk: Buffer) => {
+        this.buffer = Buffer.concat([this.buffer, chunk]);
+
+        // Read the 2-byte DNS length prefix if we haven't yet
+        if (this.messageLength === null && this.buffer.length >= 2) {
+          this.messageLength = this.buffer.readUInt16BE(0);
         }
 
-        // Check if we have the complete message (2-byte prefix + message)
-        if (messageLength !== null && buffer.length >= messageLength + 2) {
-          clearTimeout(timeoutHandle);
-          this.socket.removeListener('data', onData);
-          this.socket.removeListener('error', onError);
-
-          // Extract just the DNS message (skip the 2-byte length prefix)
-          const dnsMessage = buffer.slice(2, messageLength + 2);
-          resolve(dnsMessage);
+        // Check if we have a complete framed message
+        if (
+          this.messageLength !== null &&
+          this.buffer.length >= this.messageLength + 2
+        ) {
+          cleanup();
+          // Return just the DNS message, skip the 2-byte length prefix
+          const message = this.buffer.subarray(2, this.messageLength + 2);
+          this.buffer = this.buffer.subarray(this.messageLength + 2);
+          this.messageLength = null;
+          resolve(message);
         }
       };
 
       const onError = (err: Error) => {
-        clearTimeout(timeoutHandle);
-        this.socket.removeListener('data', onData);
-        this.socket.removeListener('error', onError);
+        cleanup();
+        this.socket.destroy();
         reject(err);
+      };
+
+      const onClose = () => {
+        cleanup();
+        reject(new Error('TCP connection closed unexpectedly'));
+      };
+
+      const onEnd = () => {
+        cleanup();
+        reject(new Error('TCP connection ended unexpectedly'));
       };
 
       this.socket.on('data', onData);
       this.socket.on('error', onError);
+      this.socket.on('close', onClose);
+      this.socket.on('end', onEnd);
     });
   }
 

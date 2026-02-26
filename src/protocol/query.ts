@@ -39,10 +39,8 @@ export class DNSQuery {
     // Build the DNS message portion in a temporary buffer
     const dnsBuffer = new DNSBuffer(512);
     dnsBuffer.writeUint16(this.id);
-    // flags: RD = 1 (lowest bit of first flags byte). Z=010 => in second byte bits6-4
-    const firstFlags = 0x01; // RD
-    const secondFlags = 0x20; // Z=2 << 4
-    const flags = (firstFlags << 8) | secondFlags;
+    let flags = 0;
+    flags |= 1 << 8; // RD bit
     dnsBuffer.writeUint16(flags);
     dnsBuffer.writeUint16(1); // qdcount
     dnsBuffer.writeUint16(0); // ancount

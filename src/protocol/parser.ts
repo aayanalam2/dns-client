@@ -2,17 +2,24 @@ import { DNSBuffer } from '../core/DNSBuffer.js';
 import { RecordType, DNSAnswer } from '../core/types.js';
 
 function ipv4FromBytes(b: Buffer) {
+  if (b.length !== 4) {
+    throw new Error(`A record must have rdlen=4, got ${b.length}`);
+  }
   return Array.from(b)
     .map((x) => x.toString())
     .join('.');
 }
 
 function ipv6FromBytes(b: Buffer) {
+  if (b.length !== 16) {
+    throw new Error(`AAAA record must have rdlen=16, got ${b.length}`);
+  }
   const parts: string[] = [];
   for (let i = 0; i < 16; i += 2) {
     parts.push(b.readUInt16BE(i).toString(16));
   }
-  return parts.join(':').replace(/(^|:)0(:0)+(:|$)/, '::');
+  // Return fully expanded address (no compression)
+  return parts.join(':');
 }
 
 const parseA = (b: DNSBuffer, rdlen: number) => {
@@ -25,13 +32,28 @@ const parseAAAA = (b: DNSBuffer, rdlen: number) => {
   return ipv6FromBytes(buf);
 };
 
-const parseName = (b: DNSBuffer) => {
-  return b.readName();
+const parseName = (b: DNSBuffer, rdlen: number) => {
+  const start = b.offset;
+  const name = b.readName();
+  const bytesRead = b.offset - start;
+  if (bytesRead !== rdlen) {
+    throw new Error(
+      `Name parsing consumed ${bytesRead} bytes but rdlen=${rdlen}`
+    );
+  }
+  return name;
 };
 
-const parseMX = (b: DNSBuffer) => {
+const parseMX = (b: DNSBuffer, rdlen: number) => {
+  const start = b.offset;
   const preference = b.readUint16();
   const exchange = b.readName();
+  const bytesRead = b.offset - start;
+  if (bytesRead !== rdlen) {
+    throw new Error(
+      `MX parsing consumed ${bytesRead} bytes but rdlen=${rdlen}`
+    );
+  }
   return `${preference} ${exchange}`;
 };
 
@@ -52,14 +74,24 @@ function parseAnswer(
   rdlen: number
 ): DNSAnswer {
   const parser = answerParsers[type];
-  const data = parser ? parser(b, rdlen) : (b.readBytes(rdlen), '');
+  const data = parser ? parser(b, rdlen) : b.readBytes(rdlen).toString('hex');
 
   return { name, type, class: cls, ttl, data };
 }
 
-export function parseResponse(buf: Buffer): { answers: DNSAnswer[] } {
+export function parseResponse(
+  buf: Buffer,
+  queryID?: number
+): { answers: DNSAnswer[] } {
   const b = new DNSBuffer(buf);
   const header = b.readHeader();
+
+  // Validate response ID matches query ID
+  if (queryID !== undefined && header.id !== queryID) {
+    throw new Error(
+      `Response ID mismatch: expected ${queryID}, got ${header.id}`
+    );
+  }
 
   // skip questions
   for (let i = 0; i < header.qdcount; i++) {

@@ -27,7 +27,7 @@ export async function resolve(
   try {
     await socket.send(packet, dnsServer, dnsPort, dnsTimeout);
     const response = await socket.receive(dnsTimeout);
-    return parseResponse(response);
+    return parseResponse(response, query.id);
   } finally {
     socket.close();
   }

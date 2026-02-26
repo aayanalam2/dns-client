@@ -36,10 +36,14 @@ export class DNSBuffer extends ByteCursor {
     const origOff = startPos;
 
     while (true) {
-      const len = this.buf.readUInt8(off);
+      const len = this.readUint8At(off);
       if ((len & DNS_POINTER_MASK) === DNS_POINTER_VALUE) {
-        const b2 = this.buf.readUInt8(off + 1);
+        const b2 = this.readUint8At(off + 1);
         const ptr = ((len & DNS_POINTER_OFFSET_MASK) << 8) | b2;
+        // Validate pointer bounds
+        if (ptr < 0 || ptr >= this.buf.length) {
+          throw new Error('DNS name pointer out of bounds');
+        }
         const r = this.readNameInternal(ptr, depth + 1);
         labels.push(r.name);
         off += 2;
@@ -47,7 +51,13 @@ export class DNSBuffer extends ByteCursor {
       }
       off += 1;
       if (len === 0) break;
-      labels.push(this.buf.toString('ascii', off, off + len));
+      // Validate label length
+      if (len > MAX_LABEL_LENGTH) {
+        throw new Error(
+          `DNS label length ${len} exceeds maximum ${MAX_LABEL_LENGTH}`
+        );
+      }
+      labels.push(this.readBytesAt(off, len).toString('ascii'));
       off += len;
     }
 
@@ -55,15 +65,30 @@ export class DNSBuffer extends ByteCursor {
   }
 
   writeName(name: string) {
+    // Validate domain name
     if (name === '') {
       this.writeUint8(0);
       return;
     }
+
+    if (name.length > 255) {
+      throw new Error('domain name exceeds 255 bytes');
+    }
+
     const parts = name.split('.');
+
+    for (const part of parts) {
+      if (part === '') {
+        throw new Error('domain name contains empty label');
+      }
+      const len = Buffer.byteLength(part);
+      if (len > MAX_LABEL_LENGTH) {
+        throw new Error(`label "${part}" exceeds ${MAX_LABEL_LENGTH} bytes`);
+      }
+    }
+
     for (const p of parts) {
       const len = Buffer.byteLength(p);
-      if (len === 0) continue;
-      if (len > MAX_LABEL_LENGTH) throw new Error('label too long');
       this.writeUint8(len);
       this.writeBytes(Buffer.from(p, 'ascii'));
     }

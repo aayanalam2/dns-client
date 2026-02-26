@@ -8,12 +8,15 @@ import { Buffer } from 'buffer';
 export class ByteCursor {
   protected buf: Buffer;
   offset: number = 0;
+  private limit: number = 0; // Track written boundary
 
   constructor(sizeOrBuffer: number | Buffer = 512) {
     if (typeof sizeOrBuffer === 'number') {
       this.buf = Buffer.alloc(sizeOrBuffer);
+      this.limit = 0;
     } else {
       this.buf = sizeOrBuffer;
+      this.limit = sizeOrBuffer.length;
     }
   }
 
@@ -26,7 +29,7 @@ export class ByteCursor {
   }
 
   private ensureReadable(size: number, pos: number) {
-    if (pos < 0 || pos + size > this.buf.length) {
+    if (pos < 0 || pos + size > this.limit) {
       throw new Error('buffer underflow');
     }
   }
@@ -53,6 +56,7 @@ export class ByteCursor {
     this.ensureSize(size);
     fn(this.offset);
     this.offset += size;
+    this.limit = Math.max(this.limit, this.offset);
   }
 
   // Temporary offset helper - run code at a different offset without changing cursor position
@@ -96,6 +100,19 @@ export class ByteCursor {
 
   writeBytes(b: Buffer) {
     this.writeInternal(b.length, (p) => b.copy(this.buf, p));
+  }
+
+  // Protected position-based reads for subclasses (safe, with bounds checking)
+  protected readUint8At(pos: number): number {
+    return this.readAtInternal(pos, 1, (p) => this.buf.readUInt8(p));
+  }
+
+  protected readUint16At(pos: number): number {
+    return this.readAtInternal(pos, 2, (p) => this.buf.readUInt16BE(p));
+  }
+
+  protected readBytesAt(pos: number, len: number): Buffer {
+    return this.readAtInternal(pos, len, (p) => this.buf.subarray(p, p + len));
   }
 
   // Buffer management
