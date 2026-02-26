@@ -6,6 +6,11 @@ export enum RecordType {
   AAAA = 28,
 }
 
+export enum TransportType {
+  UDP = 'UDP',
+  TCP = 'TCP',
+}
+
 export interface DNSAnswer {
   name: string;
   type: RecordType;

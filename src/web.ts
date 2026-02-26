@@ -2,7 +2,7 @@ import http from 'http';
 import { URL } from 'url';
 import config from './config.json' with { type: 'json' };
 import { resolve } from './client.js';
-import { RecordType } from './core/types.js';
+import { RecordType, TransportType } from './core/types.js';
 
 const WEB_HOST = config.web.host;
 const WEB_PORT = config.web.port;
@@ -12,6 +12,14 @@ function parseRecordType(value: string): RecordType | null {
   const resolved = RecordType[key];
   if (typeof resolved !== 'number') return null;
   return resolved;
+}
+
+function parseTransportType(value: string): TransportType {
+  const normalized = value.toUpperCase();
+  if (normalized in TransportType) {
+    return TransportType[normalized as keyof typeof TransportType];
+  }
+  return TransportType.UDP;
 }
 
 function htmlPage(): string {
@@ -44,6 +52,10 @@ function htmlPage(): string {
     <label>Server <input id="server" value="${config.dns.defaultServer}" /></label>
     <label>Port <input id="port" type="number" min="1" value="${config.dns.defaultPort}" /></label>
     <label>Timeout (ms) <input id="timeout" type="number" min="1" value="${config.dns.defaultTimeoutMs}" /></label>
+    <label>Transport <select id="transport">
+      <option>UDP</option>
+      <option>TCP</option>
+    </select></label>
     <button type="submit">Resolve</button>
   </form>
   <pre id="output">Run a query to see results...</pre>
@@ -61,8 +73,9 @@ function htmlPage(): string {
       const server = document.getElementById('server').value;
       const port = document.getElementById('port').value;
       const timeout = document.getElementById('timeout').value;
+      const transport = document.getElementById('transport').value;
 
-      const params = new URLSearchParams({ type, name, server, port, timeout });
+      const params = new URLSearchParams({ type, name, server, port, timeout, transport });
       const res = await fetch('/api/resolve?' + params.toString());
       const body = await res.json();
       output.textContent = JSON.stringify(body, null, 2);
@@ -108,6 +121,8 @@ const server = http.createServer(async (req, res) => {
     const serverName = reqUrl.searchParams.get('server') || undefined;
     const port = parsePositiveInt(reqUrl.searchParams.get('port'));
     const timeout = parsePositiveInt(reqUrl.searchParams.get('timeout'));
+    const transportRaw = reqUrl.searchParams.get('transport') ?? 'UDP';
+    const transport = parseTransportType(transportRaw);
 
     if (!name) {
       writeJson(res, 400, { error: 'name is required' });
@@ -124,6 +139,7 @@ const server = http.createServer(async (req, res) => {
         server: serverName,
         port,
         timeout,
+        transportType: transport,
       });
       writeJson(res, 200, {
         query: {
@@ -132,6 +148,7 @@ const server = http.createServer(async (req, res) => {
           server: serverName ?? config.dns.defaultServer,
           port: port ?? config.dns.defaultPort,
           timeout: timeout ?? config.dns.defaultTimeoutMs,
+          transport: transportRaw.toUpperCase(),
         },
         answers: result.answers,
       });

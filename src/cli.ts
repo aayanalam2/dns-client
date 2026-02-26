@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { resolve } from './client.js';
-import { RecordType } from './core/types.js';
+import { RecordType, TransportType } from './core/types.js';
 
 type CliOptions = {
   type: string;
@@ -8,6 +8,7 @@ type CliOptions = {
   server?: string;
   port?: number;
   timeout?: number;
+  transportType?: TransportType;
 };
 
 const EXIT_INVALID_USAGE = 2;
@@ -15,10 +16,10 @@ const EXIT_RUNTIME_FAILURE = 1;
 
 function printUsage() {
   console.error(
-    'Usage: dns-client <TYPE> <NAME> [--server <ip>] [--port <number>] [--timeout <ms>]'
+    'Usage: dns-client <TYPE> <NAME> [--server <ip>] [--port <number>] [--timeout <ms>] [--transport <udp|tcp>]'
   );
   console.error(
-    'Example: dns-client A carbonteq.com --server 8.8.8.8 --port 53 --timeout 2000'
+    'Example: dns-client A carbonteq.com --server 8.8.8.8 --port 53 --timeout 2000 --transport udp'
   );
 }
 
@@ -28,6 +29,14 @@ function parseRecordType(value: string): RecordType {
     throw new Error(`Unsupported record type: ${value}`);
   }
   return RecordType[key];
+}
+
+function parseTransportType(value: string): TransportType {
+  const normalized = value.toUpperCase();
+  if (normalized in TransportType) {
+    return TransportType[normalized as keyof typeof TransportType];
+  }
+  throw new Error(`Unsupported transport type: ${value}`);
 }
 
 function parsePositiveInt(value: string, fieldName: string): number {
@@ -53,6 +62,7 @@ function parseCliArgs(args: string[]): CliOptions {
   let server: string | undefined;
   let port: number | undefined;
   let timeout: number | undefined;
+  let transportType: TransportType | undefined;
 
   for (let i = 2; i < args.length; i++) {
     const current = args[i];
@@ -74,10 +84,16 @@ function parseCliArgs(args: string[]): CliOptions {
       timeout = parsePositiveInt(value, 'timeout');
       continue;
     }
+    if (current === '--transport') {
+      const value = args[++i];
+      if (!value) throw new Error('Missing value for --transport');
+      transportType = parseTransportType(value);
+      continue;
+    }
     throw new Error(`Unknown argument: ${current}`);
   }
 
-  return { type, name, server, port, timeout };
+  return { type, name, server, port, timeout, transportType };
 }
 
 async function main() {
@@ -104,6 +120,7 @@ async function main() {
       server: options.server,
       port: options.port,
       timeout: options.timeout,
+      transportType: options.transportType,
     });
     if (res.answers.length === 0) {
       console.log(

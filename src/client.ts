@@ -1,13 +1,8 @@
-import dgram from 'dgram';
-import { once } from 'events';
 import { DNSQuery } from './protocol/query.js';
 import { parseResponse } from './protocol/parser.js';
-import { RecordType, DNSAnswer } from './core/types.js';
+import { RecordType, DNSAnswer, TransportType } from './core/types.js';
 import config from './config.json' with { type: 'json' };
-
-type SocketFactory = () => dgram.Socket;
-
-const defaultSocketFactory: SocketFactory = () => dgram.createSocket('udp4');
+import { DNSSocketFactory } from './transport/factory.js';
 
 export async function resolve(
   name: string,
@@ -16,35 +11,23 @@ export async function resolve(
     server?: string;
     port?: number;
     timeout?: number;
-    socketFactory?: SocketFactory;
+    transportType?: TransportType;
   }
 ): Promise<{ answers: DNSAnswer[] }> {
   const dnsServer = options?.server ?? config.dns.defaultServer;
   const dnsPort = options?.port ?? config.dns.defaultPort;
   const dnsTimeout = options?.timeout ?? config.dns.defaultTimeoutMs;
-  const socketFactory = options?.socketFactory ?? defaultSocketFactory;
+  const transportType = options?.transportType ?? TransportType.UDP;
 
-  const socket = socketFactory();
-  const query = new DNSQuery(name, type);
+  const query = new DNSQuery(name, type, transportType);
   const packet = query.pack();
 
+  const socket = DNSSocketFactory.create(transportType);
+
   try {
-    await new Promise<void>((resolve, reject) => {
-      socket.send(packet, dnsPort, dnsServer, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
-    const [msg] = await Promise.race([
-      once(socket, 'message'),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('DNS query timed out')), dnsTimeout)
-      ),
-    ]);
-
-    const parsed = parseResponse(msg as Buffer);
-    return parsed;
+    await socket.send(packet, dnsServer, dnsPort, dnsTimeout);
+    const response = await socket.receive(dnsTimeout);
+    return parseResponse(response);
   } finally {
     socket.close();
   }
