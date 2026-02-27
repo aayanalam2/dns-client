@@ -79,6 +79,17 @@ function parseAnswer(
   return { name, type, class: cls, ttl, data };
 }
 
+function* parseAnswers(b: DNSBuffer, count: number): Generator<DNSAnswer> {
+  for (let i = 0; i < count; i++) {
+    const name = b.readName();
+    const type = b.readUint16();
+    const cls = b.readUint16();
+    const ttl = b.readUint32();
+    const rdlen = b.readUint16();
+    yield parseAnswer(b, name, type, cls, ttl, rdlen);
+  }
+}
+
 export function parseResponse(
   buf: Buffer,
   queryID?: number
@@ -100,15 +111,7 @@ export function parseResponse(
     b.readUint16();
   }
 
-  const answers: DNSAnswer[] = [];
-  for (let i = 0; i < header.ancount; i++) {
-    const name = b.readName();
-    const type = b.readUint16();
-    const cls = b.readUint16();
-    const ttl = b.readUint32();
-    const rdlen = b.readUint16();
-    answers.push(parseAnswer(b, name, type, cls, ttl, rdlen));
-  }
+  const answers: DNSAnswer[] = [...parseAnswers(b, header.ancount)];
 
   return { answers };
 }

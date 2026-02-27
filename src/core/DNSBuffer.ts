@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
 import { ByteCursor } from './ByteCursor.js';
+import { DNSHeader } from './types.js';
 
 const DNS_POINTER_MASK = 0xc0;
 const DNS_POINTER_VALUE = 0xc0;
@@ -96,7 +97,7 @@ export class DNSBuffer extends ByteCursor {
   }
 
   // DNS header reading
-  readHeader() {
+  readHeader(): DNSHeader {
     return {
       id: this.readUint16(),
       flags: this.readUint16(),

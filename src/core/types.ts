@@ -18,3 +18,12 @@ export interface DNSAnswer {
   ttl: number;
   data: string;
 }
+
+export interface DNSHeader {
+  id: number;
+  flags: number;
+  qdcount: number;
+  ancount: number;
+  nscount: number;
+  arcount: number;
+}
